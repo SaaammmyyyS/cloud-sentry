@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: "Share Tech Mono", "JetBrains Mono", ui-monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-[#020203] m-0 p-0 overflow-x-hidden;
+  }
+}
+
+/* Moving Scanline */
+@keyframes scanline {
+  0% { transform: translateY(-100vh); }
+  100% { transform: translateY(100vh); }
+}
+
+.animate-scanline {
+  animation: scanline 10s linear infinite;
+}
+
+/* Subtle CRT Flicker */
+@keyframes flicker {
+  0% { opacity: 0.99; }
+  5% { opacity: 0.97; }
+  10% { opacity: 0.99; }
+  100% { opacity: 1; }
+}
+
+.animate-flicker {
+  animation: flicker 0.15s infinite;
+}
+
+/* Logo Scanning Effect */
+@keyframes scan {
+  0% { background-position: 0 -100px; }
+  100% { background-position: 0 100px; }
+}
+
+.animate-scan {
+  background: linear-gradient(to bottom, transparent, rgba(16, 185, 129, 0.1), transparent);
+  background-size: 100% 100px;
+  animation: scan 3s linear infinite;
+}
