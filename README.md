@@ -73,3 +73,9 @@ graph LR
 * **Modular React Design:** Decoupled components with memoized AI-JSON parsing for peak performance.
 * **Cyberpunk Aesthetics:** Custom Tailwind animations, scanline overlays, and neon-themed state management.
 * **Fault Tolerance:** Structured logging via AWS CloudWatch and robust error handling for AI API timeouts.
+
+---
+
+> [!IMPORTANT]
+> **Note on Data Latency:**
+> To optimize AWS costs, the **Attack Simulator** is scheduled to run at specific intervals rather than constantly. Upon first loading the dashboard, it may take **up to 60 seconds** for the first threat to appear. This delay is due to Lambda **"Cold Starts"** and the warm-up time required for the event-driven pipeline. Once the initial trigger occurs, data will flow in real-time via WebSockets.
