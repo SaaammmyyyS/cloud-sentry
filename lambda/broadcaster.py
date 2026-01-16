@@ -3,77 +3,67 @@ import os
 import boto3
 import urllib3
 import hashlib
+import logging
 from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 APPSYNC_URL = os.environ.get('APPSYNC_URL')
 REGION = os.environ.get('AWS_REGION', 'ap-southeast-1')
+http = urllib3.PoolManager()
 
 def lambda_handler(event, context):
-    http = urllib3.PoolManager()
-
     for record in event['Records']:
-        if record['eventName'] == 'INSERT':
+        if record['eventName'] == 'MODIFY':
             new_image = record['dynamodb']['NewImage']
-            source_ip = new_image['sourceIp']['S']
+            ai_text = new_image.get('ai_analysis', {}).get('S', 'Pending...')
 
-            location = "Unknown Origin"
-            try:
-                geo_resp = http.request('GET', f'http://ip-api.com/json/{source_ip}', timeout=2.0)
-                data = json.loads(geo_resp.data.decode('utf-8'))
-                if data.get('status') == 'success':
-                    location = f"{data.get('city')}, {data.get('country')}"
-            except: pass
+            if ai_text == "Pending...":
+                continue
 
             variables = {
-                "type": new_image['type']['S'],
-                "severity": new_image['severity']['S'],
-                "sourceIp": source_ip,
-                "timestamp": new_image['timestamp']['S'],
-                "location": location
+                "threatId": new_image.get('threatId', {}).get('S', 'unknown'),
+                "type": new_image.get('type', {}).get('S', 'Unknown'),
+                "severity": new_image.get('severity', {}).get('S', 'LOW'),
+                "sourceIp": new_image.get('sourceIp', {}).get('S', '0.0.0.0'),
+                "target_resource": new_image.get('target_resource', {}).get('S', 'External_Interface'),
+                "timestamp": new_image.get('timestamp', {}).get('S', ''),
+                "location": new_image.get('location', {}).get('S', 'Lookup Skipped'),
+                "ai_analysis": ai_text
             }
 
             query = """
-            mutation CreateThreat($type: String, $severity: String, $sourceIp: String, $timestamp: String, $location: String) {
-            createThreat(type: $type, severity: $severity, sourceIp: $sourceIp, timestamp: $timestamp, location: $location) {
-                type
-                severity
-                sourceIp
-                timestamp
-                location
-            }
+            mutation PublishThreat($threatId: ID!, $type: String, $severity: String, $sourceIp: String, $target_resource: String, $timestamp: String, $location: String, $ai_analysis: String) {
+                createThreat(threatId: $threatId, type: $type, severity: $severity, sourceIp: $sourceIp, target_resource: $target_resource, timestamp: $timestamp, location: $location, ai_analysis: $ai_analysis) {
+                    threatId
+                    type
+                    severity
+                    sourceIp
+                    location
+                    target_resource
+                    ai_analysis
+                    timestamp
+                }
             }
             """
 
             payload = json.dumps({'query': query, 'variables': variables})
-
-            payload_hash = hashlib.sha256(payload.encode('utf-8')).hexdigest()
-
             host = APPSYNC_URL.replace('https://', '').split('/')[0]
 
             request = AWSRequest(
-                method='POST',
-                url=APPSYNC_URL,
-                data=payload,
-                headers={
-                    'Content-Type': 'application/json',
-                    'host': host,
-                    'x-amz-content-sha256': payload_hash
-                }
+                method='POST', url=APPSYNC_URL, data=payload,
+                headers={'Content-Type': 'application/json', 'host': host,
+                         'x-amz-content-sha256': hashlib.sha256(payload.encode('utf-8')).hexdigest()}
             )
 
-            credentials = boto3.Session().get_credentials()
-            SigV4Auth(credentials, 'appsync', REGION).add_auth(request)
+            SigV4Auth(boto3.Session().get_credentials(), 'appsync', REGION).add_auth(request)
 
             try:
-                response = http.request(
-                    'POST',
-                    APPSYNC_URL,
-                    body=payload,
-                    headers=dict(request.headers)
-                )
-                print(f"✅ AppSync Response: {response.data.decode('utf-8')}")
+                response = http.request('POST', APPSYNC_URL, body=payload, headers=dict(request.headers))
+                logger.info(f"✅ Broadcast status: {response.status}")
             except Exception as e:
-                print(f"❌ Network Error: {e}")
+                logger.error(f"❌ Broadcast failed: {e}")
 
     return {"status": "done"}
