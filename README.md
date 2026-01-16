@@ -1,42 +1,75 @@
-# 🛡️ CLOUD-SENTRY // Autonomous Threat Intelligence
+# 🛡️ CLOUD-SENTRY // Autonomous AI Threat Intelligence
 
 **CLOUD-SENTRY** is a high-performance, real-time security monitoring dashboard designed to intercept and visualize live cloud attack vectors. By leveraging a serverless event-driven architecture, it transforms raw logs into an immersive, cyberpunk-inspired intelligence feed with sub-second latency.
 
 ---
 
+## ⚡ The Core Innovation
+
+Most security dashboards rely on **Polling** (manually requesting updates). **CLOUD-SENTRY** implements a **Push-Architecture**:
+
+* **Zero-Polling:** Sub-second data propagation via **GraphQL Subscriptions** (WebSockets).
+* **AI-in-the-Loop:** Every threat is analyzed by **Amazon Bedrock (Claude 3)** before hitting the UI.
+* **Cyberpunk UX:** A high-fidelity React interface designed for low-latency SOC environments.
+
+---
+
 ## 🏗️ System Architecture & Logic
 
-This project utilizes a modern **Event-Driven Architecture (EDA)**. The goal was to create a "Zero-Polling" system where the frontend never asks for data; instead, the backend pushes data to the UI the millisecond it is generated.
+This project utilizes a modern **Event-Driven Architecture (EDA)**. The goal was to create a "Live-Wire" system where the backend pushes data to the UI the millisecond it is processed.
 
-### 📊 Data Flow Visualization
+### 📊 Intelligence Pipeline
+
+
 
 ```mermaid
-graph TD
-    A[Attack Simulator / Python Script] -->|1. PUT Item| B[(AWS DynamoDB)]
-    B -->|2. DynamoDB Stream| C{AWS Lambda}
-    C -->|3. Data Enrichment| D[AWS AppSync]
-    D -->|4. GraphQL Subscription| E[React Frontend]
-    
-    subgraph "AWS Cloud Infrastructure"
-    B
+graph LR
+    A[Attack Simulator] -->|1. Ingest| B[(DynamoDB)]
+    B -->|2. Stream| C[AI Analyzer]
+    C -->|3. Neural Synthesis| D[Amazon Bedrock]
+    D -->|4. Update| B
+    B -->|5. Stream Update| E[Broadcaster]
+    E -->|6. Sign & Publish| F[AWS AppSync]
+    F -->|7. Live Stream| G[React Dashboard]
+
+    subgraph "AI Enrichment Layer"
     C
     D
     end
-    
-    subgraph "Client Side (Vite + React)"
+
+    subgraph "Real-Time Broadcast"
     E
+    F
     end
-    
-    style E fill:#065f46,stroke:#10b981,stroke-width:2px,color:#fff
-    style A fill:#451a03,stroke:#f59e0b,stroke-width:2px,color:#fff
 ```
 
 ### 🧠 Architectural Breakdown
 
 * **Ingestion (DynamoDB):** Attack data is ingested into a NoSQL table. I chose DynamoDB for its predictable sub-10ms performance and its native ability to trigger downstream events.
-* **The "Trigger" (DynamoDB Streams):** By enabling Streams, every `INSERT` action is captured as a time-ordered sequence of item-level changes. This is the heartbeat of the project, allowing for asynchronous processing without blocking the main data ingestion flow.
-* **Orchestration & Enrichment (AWS Lambda):** A serverless function "listens" to the stream in real-time.
-    * It parses the raw attack signature from the stream record.
-    * It performs business logic, such as calculating threat severity levels.
-    * It acts as a **SigV4-signed client** to securely push the enriched data to the AppSync GraphQL endpoint.
-* **Real-Time Broadcast (AWS AppSync):** Instead of traditional REST APIs or manual polling, I implemented **GraphQL Subscriptions**. AppSync manages the WebSocket connections for all connected clients, broadcasting the threat data instantly to the dashboard the moment the Lambda function publishes an update.
+* **Neural Analysis (AWS Lambda & Amazon Bedrock):** * Triggers automatically on DynamoDB `INSERT` events.
+    * Leverages **Claude 3 Haiku** to interpret raw attack signatures (SQLi, Brute Force, etc.).
+    * Returns structured JSON containing a technical **Summary** and **Actionable Countermeasure**.
+* **The "Broadcaster" (AWS Lambda):** * Acts as a security-hardened client using **AWS SigV4 signing**.
+    * Maps DynamoDB `NewImage` data types to GraphQL variables.
+    * Hydrates the UI with the final analyzed payload.
+* **Real-Time Broadcast (AWS AppSync):** * Manages **WebSocket** connections for all connected clients.
+    * Broadcasts threat data instantly to the dashboard the moment the Broadcaster publishes an update.
+
+---
+
+## 🛠️ Tech Stack
+
+* **Frontend:** React 18, Tailwind CSS, Apollo Client (GraphQL)
+* **Compute:** AWS Lambda (Python 3.12)
+* **Intelligence:** Amazon Bedrock (Anthropic Claude 3 Haiku)
+* **Database:** Amazon DynamoDB (NoSQL + Streams)
+* **API/Real-time:** AWS AppSync (GraphQL Subscriptions)
+* **Security:** AWS IAM with SigV4 Authentication
+
+---
+
+## 🚀 Deployment Highlights
+
+* **Modular React Design:** Decoupled components with memoized AI-JSON parsing for peak performance.
+* **Cyberpunk Aesthetics:** Custom Tailwind animations, scanline overlays, and neon-themed state management.
+* **Fault Tolerance:** Structured logging via AWS CloudWatch and robust error handling for AI API timeouts.
