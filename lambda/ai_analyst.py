@@ -15,8 +15,8 @@ table = dynamodb.Table(TABLE_NAME)
 def lambda_handler(event, context):
     system_prompt = (
         "You are an Elite SOC Analyst. Analyze security logs. "
-        "Return ONLY a valid JSON object: "
-        "{\"summary\": \"Vivid 1-sentence analysis\", \"action\": \"Clear technical directive\"}"
+        "Return ONLY a valid JSON object. Do not include any markdown formatting, preamble, or code blocks. "
+        "Required format: {\"summary\": \"...\", \"action\": \"...\"}"
     )
 
     for record in event.get('Records', []):
@@ -33,18 +33,23 @@ def lambda_handler(event, context):
                 "anthropic_version": "bedrock-2023-05-31",
                 "max_tokens": 150,
                 "system": system_prompt,
-                "messages": [{"role": "user", "content": raw_log}],
+                "messages": [
+                    {"role": "user", "content": raw_log},
+                    {"role": "assistant", "content": "{"} # This is 'Response Prefill' - forces JSON start
+                ],
                 "temperature": 0
             })
 
             response = bedrock.invoke_model(
                 body=body,
-                modelId="apac.anthropic.claude-3-haiku-20240307-v1:0",
+                modelId="anthropic.claude-3-haiku-20240307-v1:0", # Standardized ID
                 accept="application/json",
                 contentType="application/json"
             )
 
-            ai_text = json.loads(response.get("body").read())["content"][0]["text"]
+            # Re-attach the '{' we forced at the start
+            ai_text_raw = json.loads(response.get("body").read())["content"][0]["text"]
+            ai_text = "{" + ai_text_raw
 
             table.update_item(
                 Key={'threatId': threat_id, 'timestamp': timestamp},
