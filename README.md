@@ -77,5 +77,5 @@ graph LR
 ---
 
 > [!IMPORTANT]
-> **Note on Data Latency:**
-> To optimize AWS costs, the **Attack Simulator** is scheduled to run at specific intervals rather than constantly. Upon first loading the dashboard, it may take **up to 60 seconds** for the first threat to appear. This delay is due to Lambda **"Cold Starts"** and the warm-up time required for the event-driven pipeline. Once the initial trigger occurs, data will flow in real-time via WebSockets.
+> **System Availability & Optimization:**
+> To optimize cloud resource consumption, the **Attack Simulator** is programmed to execute on a **60-minute interval**. If the dashboard is accessed outside of this window, the threat feed will remain idle. Upon the start of a new cycle, please allow for a brief initialization period as the serverless pipeline activates. Once triggered, all data transitions to real-time delivery via WebSockets.
